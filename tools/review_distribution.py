@@ -18,8 +18,24 @@ def digest(path):
     with path.open('rb') as handle: return hashlib.file_digest(handle,'sha256').hexdigest()
 
 
+def source_offer(delivery):
+    return ('SM64-LilSmoke - Corresponding Source\n\n'
+        'The matching dependency sources, build inputs and project source snapshot\n'
+        'are provided at no charge as a separate asset in the same release:\n\n'
+        + delivery['url']+'\n\nSHA-256: '+delivery['sha256']+'\n\n'
+        'Release: https://github.com/josepilas/SM64-LilSmoke/releases/tag/Pre-Alpha-0.0.1\n'
+        'Public source: https://github.com/josepilas/SM64-LilSmoke\n\n'
+        'Downloading corresponding-source.zip is not necessary to install or play.\n'
+        'The package retains its operational engine source, native compiler and\n'
+        'runtimes, so original/ ROM preparation works offline as before.\n'
+        'No ROM, extracted game data or cooked game executable is supplied.\n'
+        'Component copyright and license texts are retained in runtime/licenses\n'
+        'and runtime/compiler/usr/share/doc. Their individual terms still apply.\n')
+
+
 def review(app):
     files=['meta.json','SM64.sh','icon.webp','LICENSE','original/README.txt']
+    if (app/'SOURCE-OFFER.txt').is_file(): files.append('SOURCE-OFFER.txt')
     allowed={'source.tar.gz','recipe.json','cook.py','native_build.py','bin/sm64-prepare','bin/python3',
         'source-material-review.json'}
     for path in (app/'runtime').rglob('*'):

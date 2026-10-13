@@ -71,13 +71,20 @@ def package(app, output):
 def rebuild(root, template, sdk, app):
     cross=sdk/'bin/mipsel-buildroot-linux-musl-'
     subprocess.run(['make','-j1','SDK='+str(sdk)],cwd=root,check=True)
-    shutil.copytree(template,app/'runtime',ignore=shutil.ignore_patterns('__pycache__','*.pyc'))
+    template_materials=json.loads((template/'source-material-review.json').read_text())
+    ignored=['__pycache__','*.pyc']
+    if template_materials.get('external_corresponding_source'): ignored.append('corresponding-source')
+    shutil.copytree(template,app/'runtime',ignore=shutil.ignore_patterns(*ignored))
     for path in (root/'app').rglob('*'):
         if path.is_file():
             target=app/path.relative_to(root/'app')
             target.parent.mkdir(parents=True,exist_ok=True)
             shutil.copyfile(path,target)
     shutil.copyfile(root/'LICENSE',app/'LICENSE')
+    materials=json.loads((app/'runtime/source-material-review.json').read_text())
+    if materials.get('external_corresponding_source'):
+        from review_distribution import source_offer
+        (app/'SOURCE-OFFER.txt').write_text(source_offer(materials['external_corresponding_source']))
     # The runtime template retains the reviewed user-provided WebP icon.
     shutil.copyfile(root/'app/icon.webp',app/'icon.webp')
     shutil.copyfile(root/'build/sm64-prepare',app/'runtime/bin/sm64-prepare')

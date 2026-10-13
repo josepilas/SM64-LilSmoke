@@ -12,7 +12,10 @@ It is not a recreated-game demo or a Windows emulator.
 ## Download
 
 [Pre-Alpha-0.0.1](https://github.com/josepilas/SM64-LilSmoke/releases/tag/Pre-Alpha-0.0.1)
-is published with the asset-free `.lilpck` and its SHA-256 sidecar. The source
+is published with the asset-free `.lilpck`, a separate `corresponding-source.zip`,
+and SHA-256 sidecars. Only the `.lilpck` is needed to install and play. Its root
+`SOURCE-OFFER.txt` links to the matching dependency sources and project snapshot.
+The offline preparation/runtime files and license notices stay in the app. The source
 is public here; authored adaptations use MPL-2.0. This experimental package
 passed the production MIPS installer, all 3,300 installed-file checks, a fresh
 ROM-to-cache build, and original-game launch through LilSmokeUI in a 120 MiB
@@ -82,9 +85,14 @@ python3 tools/package.py --runtime /path/to/unpacked/runtime \
 This rebuild compiles the authored UI/input code and conversion tools from source.
 It does not need a ROM, cook game data, or distribute a graphics binary. The
 native compiler, Python and dependency rebuilding recipes and matching source
-materials are also retained in the package's `runtime/corresponding-source/`.
+materials are supplied in the separate `corresponding-source.zip` release asset,
+not copied onto the console. Extract that ZIP alongside the unpacked application
+when inspecting or rebuilding dependencies; it is not required for playing.
 The runtime supplies musl libraries; DirectFB and hardware display/audio drivers
 are part of the LilSmokeOS platform contract.
+
+When publishing modified binaries, regenerate the matching source archive and
+its download pointer rather than reusing the original release's source offer.
 
 ## License
 
