@@ -12,12 +12,12 @@ It is not a recreated-game demo or a Windows emulator.
 ## Download
 
 [Pre-Alpha-0.0.1](https://github.com/josepilas/SM64-LilSmoke/releases/tag/Pre-Alpha-0.0.1)
-is published with the asset-free `.lilpck`, a separate `corresponding-source.zip`,
+is published with the **43.6 MiB** asset-free `.lilpck`, a separate `corresponding-source.zip`,
 and SHA-256 sidecars. Only the `.lilpck` is needed to install and play. Its root
 `SOURCE-OFFER.txt` links to the matching dependency sources and project snapshot.
 The offline preparation/runtime files and license notices stay in the app. The source
 is public here; authored adaptations use MPL-2.0. This experimental package
-passed the production MIPS installer, all 3,300 installed-file checks, a fresh
+passed the production MIPS installer, all 3,135 installed-file checks, a fresh
 ROM-to-cache build, and original-game launch through LilSmokeUI in a 120 MiB
 single-CPU MIPS VM. Physical first-run cooking time and audible output on the
 M8 still need acceptance; VM timings are not hardware FPS measurements.
