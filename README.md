@@ -9,6 +9,16 @@ The original game engine is based on [n64decomp/sm64](https://github.com/n64deco
 and the pinned [DrUm78 software port](https://github.com/DrUm78/sm64-port).
 It is not a recreated-game demo or a Windows emulator.
 
+## Download
+
+[Pre-Alpha-0.0.1](https://github.com/josepilas/SM64-LilSmoke/releases/tag/Pre-Alpha-0.0.1)
+is published with the asset-free `.lilpck` and its SHA-256 sidecar. The source
+is public here; authored adaptations use MPL-2.0. This experimental package
+passed the production MIPS installer, all 3,300 installed-file checks, a fresh
+ROM-to-cache build, and original-game launch through LilSmokeUI in a 120 MiB
+single-CPU MIPS VM. Physical first-run cooking time and audible output on the
+M8 still need acceptance; VM timings are not hardware FPS measurements.
+
 ## Bring Your Own Data
 
 Install the `.lilpck` through LilSmoke Explorer, then put one supported **US
