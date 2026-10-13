@@ -1,7 +1,7 @@
 # SM64-LilSmoke
 
-Created by **José Pilas**. Native original-engine Super Mario 64 adaptation
-for LilSmokeOS on the tested HCSEMI MIPS device lineage.
+Native original-engine Super Mario 64 adaptation
+for LilSmokeOS on the tested MIPS device lineage.
 
 This repository contains source and build/extraction tools, not a ROM,
 extracted texture/music/sample collection or a pre-cooked full game.
