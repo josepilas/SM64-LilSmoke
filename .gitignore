@@ -1,0 +1,7 @@
+build/
+original/
+.sm64-cache/
+saves/
+__pycache__/
+*.pyc
+*.lilpck

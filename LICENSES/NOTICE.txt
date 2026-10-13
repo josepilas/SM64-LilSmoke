@@ -1,0 +1,9 @@
+SM64-LilSmoke original adaptations: Copyright 2026 Jose Pilas, MPL-2.0.
+Original game engine lineage: n64decomp/sm64 and the pinned DrUm78 software port.
+The upstream graphics code is distributed as licensed source only.
+Its binary is generated locally from source, not included in this download.
+No ROM or extracted texture/music/sample cache is distributed.
+Bundled GNU compiler tools and libraries retain their individual GPL/LGPL terms.
+Compiler dependencies use isolated glibc; Python and the generated game use musl.
+Matching source archives, Debian packaging and input adaptations are bundled.
+Source/build configurations and dependency notices are supplied for review.
