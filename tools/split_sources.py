@@ -46,8 +46,9 @@ def copy_member(source,name,destination):
 
 
 def add_project_snapshot(checkout,destination):
-    commit=subprocess.check_output(['git','-C',str(checkout),'rev-parse','HEAD'],text=True).strip()
-    process=subprocess.Popen(['git','-C',str(checkout),'archive',commit],stdout=subprocess.PIPE)
+    git=['git','-c','safe.directory='+str(checkout.resolve()),'-C',str(checkout)]
+    commit=subprocess.check_output([*git,'rev-parse','HEAD'],text=True).strip()
+    process=subprocess.Popen([*git,'archive',commit],stdout=subprocess.PIPE)
     try:
         with tarfile.open(fileobj=process.stdout,mode='r|') as source:
             for member in source:
