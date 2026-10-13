@@ -1,5 +1,5 @@
-build/
-original/
+/build/
+/original/
 .sm64-cache/
 saves/
 __pycache__/

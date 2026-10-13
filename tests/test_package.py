@@ -72,5 +72,14 @@ class DistributionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'input changed'):
             package(self.app,self.root/'bad.lilpck')
 
+    def test_fat_case_collisions_rejected_before_distribution(self):
+        (self.app/'runtime/python').mkdir()
+        (self.app/'runtime/python/A.py').write_text('fixture')
+        (self.app/'runtime/python/a.py').write_text('fixture')
+        if len(list((self.app/'runtime/python').iterdir()))!=2:
+            self.skipTest('Requires a case-sensitive staging filesystem')
+        with self.assertRaisesRegex(ValueError,'FAT case collisions'):
+            review(self.app)
+
 
 if __name__=='__main__': unittest.main()

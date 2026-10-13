@@ -32,6 +32,14 @@ def review(app):
         if path.is_symlink(): raise ValueError('Linked distribution input: '+str(relative))
         files.append('runtime/'+relative.as_posix())
     helpers={}
+    seen={}
+    collisions=[]
+    for name in files:
+        if name.casefold() in seen:
+            collisions.append([seen[name.casefold()],name])
+        seen[name.casefold()]=name
+    if collisions:
+        raise ValueError('FAT case collisions: '+json.dumps(collisions))
     with tarfile.open(app/'runtime/source.tar.gz','r:gz') as archive:
         for item in archive:
             if not item.isfile(): raise ValueError('Non-file source archive member')
