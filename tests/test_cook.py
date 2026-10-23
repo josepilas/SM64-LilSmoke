@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: MPL-2.0
 import hashlib
+import errno
 import json
 import os
 from pathlib import Path
@@ -42,6 +43,13 @@ class Tests(unittest.TestCase):
 
     def tearDown(self):
         self.temporary.cleanup()
+
+    def test_silent_process_ticks_without_inventing_completed_work(self):
+        ticks, lines = [], []
+        cook.run_stage([sys.executable, '-c', 'import time; time.sleep(1.2)'],
+            self.app, self.app / 'silent.log', lines.append, on_tick=lambda: ticks.append(True))
+        self.assertGreaterEqual(len(ticks), 2)
+        self.assertEqual(lines, [])
 
     def builder(self, stage, progress, cancel):
         self.assertEqual((stage / 'baserom.us.z64').read_bytes(), self.raw)
@@ -112,6 +120,22 @@ class Tests(unittest.TestCase):
         self.assertTrue(self.rom.exists())
         self.assertFalse((self.app / '.sm64-cache/current.json').exists())
 
+    def test_builder_can_move_private_normalized_rom(self):
+        original_builder = self.builder
+        def moved(stage, progress, cancel):
+            result = original_builder(stage, progress, cancel)
+            source = stage / 'source'
+            source.mkdir()
+            (stage / 'baserom.us.z64').rename(source / 'baserom.us.z64')
+            # NativeBuild removes the scratch source after final linkage.
+            (source / 'baserom.us.z64').unlink()
+            source.rmdir()
+            return result
+        self.builder = moved
+        game = self.prepare()
+        self.assertTrue(game.is_file())
+        self.assertFalse(self.rom.exists())
+
     def test_cancel_keeps_original(self):
         with self.assertRaises(cook.Cancelled):
             self.prepare(cancel=lambda: True)
@@ -161,6 +185,37 @@ class Tests(unittest.TestCase):
             cook.run_stage([sys.executable,'-c','import time; time.sleep(20)'],self.app,
                 self.app/'timeout.log',lambda line:None,timeout=0.1)
         self.assertTrue(self.rom.exists())
+
+    def test_missing_flock_uses_releasable_ram_lock(self):
+        import fcntl
+        locks=self.app/'ram-locks'
+        with (patch.object(fcntl,'flock',side_effect=OSError(errno.ENOSYS,'unsupported')),
+              patch.dict(os.environ,{'LILSMOKE_SM64_LOCK_ROOT':str(locks)})):
+            game=self.prepare(delete_original=False)
+            self.assertTrue(game.is_file())
+            self.assertEqual(list(locks.iterdir()),[])
+
+    def test_missing_epoll_falls_back_to_poll(self):
+        import selectors
+        lines=[]
+        with patch.object(selectors,'DefaultSelector',side_effect=OSError(errno.ENOSYS,'unsupported')):
+            cook.run_stage([sys.executable,'-c','print("poll fallback")'],self.app,
+                self.app/'poll.log',lines.append)
+        self.assertEqual(lines,['poll fallback'])
+
+    def test_selector_setup_failure_reaps_started_process(self):
+        import selectors
+        actual=cook.subprocess.Popen
+        children=[]
+        def spawn(*args,**kwargs):
+            child=actual(*args,**kwargs);children.append(child);return child
+        with (patch.object(cook.subprocess,'Popen',side_effect=spawn),
+              patch.object(selectors,'DefaultSelector',side_effect=OSError(errno.ENOMEM,'allocation failed'))):
+            with self.assertRaises(OSError):
+                cook.run_stage([sys.executable,'-c','import time;time.sleep(20)'],self.app,
+                    self.app/'broken-selector.log',lambda line:None)
+        self.assertEqual(len(children),1)
+        self.assertIsNotNone(children[0].poll())
 
     @unittest.skipUnless(os.name == 'posix', 'device process group semantics')
     def test_cancel_terminates_build_process(self):

@@ -17,16 +17,33 @@ It is not a recreated-game demo or a Windows emulator.
 
 ## Download
 
-[Pre-Alpha-0.0.1](https://github.com/josepilas/SM64-LilSmoke/releases/tag/Pre-Alpha-0.0.1)
-is published with the **43.6 MiB** asset-free `.lilpck`, a separate `corresponding-source.zip`,
+[Pre-Alpha-0.0.2](https://github.com/josepilas/SM64-LilSmoke/releases/tag/Pre-Alpha-0.0.2)
+provides an approximately **44 MiB** asset-free `.lilpck`, a separate `corresponding-source.zip`,
 and SHA-256 sidecars. Only the `.lilpck` is needed to install and play. Its root
 `SOURCE-OFFER.txt` links to the matching dependency sources and project snapshot.
 The offline preparation/runtime files and license notices stay in the app. The source
-is public here; authored adaptations use MPL-2.0. This experimental package
-passed the production MIPS installer, all 3,135 installed-file checks, a fresh
-ROM-to-cache build, and original-game launch through LilSmokeUI in a 120 MiB
-single-CPU MIPS VM. Physical first-run cooking time and audible output on the
-M8 still need acceptance; VM timings are not hardware FPS measurements.
+is public here; authored adaptations use MPL-2.0.
+
+This release promotes the verified local preparation/cached-launch fixes. It
+does not include a precompiled original game or remove the initial local build.
+See [CHANGELOG.md](CHANGELOG.md) for changes and the exact testing limits.
+
+## Changes In 0.0.2
+
+- Preparation works with a 1970/no-RTC clock and FAT32 source timestamps,
+  without changing the device's clock or disabling dependency checks.
+- Locally generated sound data uses assembly `.incbin` instead of large C
+  initializers. Compiler diagnostic-memory overhead and duplicate dependency
+  compilation are reduced without lowering gameplay/renderer optimizations.
+- Interrupted preparation resumes verified work, including recovery from a
+  power cut during the final executable-copy transaction.
+- Progress names the current extraction/build task; the extracted-MB counter
+  is separate from compilation progress. B cancels without deleting the ROM.
+- A valid prepared cache launches directly, without starting the preparation
+  worker/UI again. The game has a separate 96 MiB virtual-address guard, which
+  includes file/MMIO mappings; it is not a 96 MiB physical-RAM allocation.
+- Source distribution includes the new preparation helpers and matching SDL
+  changes. Dependency sources remain separate from the installation package.
 
 ## Bring Your Own Data
 
@@ -47,6 +64,17 @@ upstream graphics implementation permits source redistribution but explicitly
 prohibits binary redistribution; its binary is compiled locally, not shipped.
 Save data is kept separately in `saves/` and survives a cache rebuild.
 
+For US 1.0, extracted data totals about **10.68 MB**. That number stops increasing
+when extraction finishes; texture conversion and compilation still have work to
+do. Follow the displayed task/percentage rather than treating the MB counter as
+a compilation counter. Initial preparation can still take a long time on this
+CPU. Do not unplug power while it is preparing or saving.
+
+When updating through LilSmoke Explorer, keep the app's name/ID and use a recent
+LilSmokeOS installer that preserves a validated prepared cache and `saves/`.
+Keep a separate backup of saves. An invalid or incompatible cache is rebuilt;
+do not copy a cooked game from another user or distribute your private cache.
+
 ## Controls
 
 | Input | Action |
@@ -60,6 +88,10 @@ Save data is kept separately in `saves/` and survives a cache rebuild.
 | Start | Original pause |
 | Start + X | LilSmoke options menu |
 | Start + Select | Exit |
+
+The LilSmoke options menu contains the existing quality/scaling and volume
+controls. Higher world resolution costs CPU time; this update does not promise
+full-speed high-resolution rendering on every scene/device.
 
 ## Target And Build
 
@@ -85,7 +117,7 @@ compiler/library template:
 
 ```sh
 python3 tools/package.py --runtime /path/to/unpacked/runtime \
-  --sdk /path/to/lilsmoke-sdk --output SM64-LilSmoke-Pre-Alpha-0.0.1.lilpck
+  --sdk /path/to/lilsmoke-sdk --output SM64-LilSmoke-Pre-Alpha-0.0.2.lilpck
 ```
 
 This rebuild compiles the authored UI/input code and conversion tools from source.
@@ -110,3 +142,8 @@ redistribution of the locally generated original-game runtime.
 Release acceptance must include fresh-ROM extraction, controller cancellation,
 original-game launch, restart without the ROM, saves and the target RAM budget.
 See `RELEASE-STATUS.json` for the exact completed tests and outstanding limits.
+
+The completed qualification combines a full native-MIPS extraction/build with
+separate constrained whole-system resume/game and cached-launch tests (one CPU,
+120 MiB physical RAM, no swap, FAT32/no-RTC preparation). It is not a full fresh
+compilation measured on the physical HC16xx, nor a hardware FPS/audio guarantee.

@@ -5,6 +5,5 @@
   "extracted_assets_included": false,
   "game_binary_included": false,
   "upstream_graphics_binary_redistribution_allowed": false,
-  "release_acceptance_pending": false,
-  "physical_cooker_acceptance_pending": true
+  "release_acceptance_pending": true
 }

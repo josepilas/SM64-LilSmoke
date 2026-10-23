@@ -88,7 +88,9 @@ def rebuild(root, template, sdk, app):
     # The runtime template retains the reviewed user-provided WebP icon.
     shutil.copyfile(root/'app/icon.webp',app/'icon.webp')
     shutil.copyfile(root/'build/sm64-prepare',app/'runtime/bin/sm64-prepare')
-    for name in ('cook.py','native_build.py'):
+    for name in ('sm64-bin2c','sm64-build-shell'):
+        shutil.copyfile(root/'build'/name,app/'runtime/bin'/name)
+    for name in ('cook.py','native_build.py','resume.py','build_progress.py','sound_data.S'):
         shutil.copyfile(root/'src/prepare'/name,app/'runtime'/name)
     for name in OBJECTS:
         shutil.copyfile(root/'build'/name,app/'runtime/objects'/name)

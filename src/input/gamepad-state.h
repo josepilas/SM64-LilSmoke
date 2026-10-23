@@ -29,7 +29,10 @@ static inline uint64_t ls_gp_now(void) {
     if (clock_gettime(CLOCK_MONOTONIC, &ts)) return 0;
     return (uint64_t)ts.tv_sec * 1000 + (uint64_t)ts.tv_nsec / 1000000;
 }
-struct ls_gp_reader { int fd; const struct ls_gp_state *map; uint64_t checked; };
+/* Local reader metadata only. Keep the on-disk ABI-1 packet compatible with
+ * cached applications, including the public SM64 game. */
+struct ls_gp_reader { int fd; const struct ls_gp_state *map; uint64_t checked, generation; };
+#define LS_GP_READER_INIT { -1, NULL, 0, 0 }
 static inline void ls_gp_close(struct ls_gp_reader *r) {
     if (r->map) munmap((void *)r->map, sizeof(*r->map));
     if (r->fd >= 0) close(r->fd);
@@ -41,14 +44,15 @@ static inline int ls_gp_read(struct ls_gp_reader *r, struct ls_gp_state *out) {
     const uint64_t now = ls_gp_now();
     if (!path) path = "/run/lilsmoke-gamepads.state";
     memset(out, 0, sizeof(*out));
-    if (r->map && now - r->checked >= 1000) {
+    if (r->map && now - r->checked >= 100) {
         struct stat opened;
         r->checked = now;
-        if (stat(path, &st) || fstat(r->fd, &opened) || st.st_ino != opened.st_ino || st.st_dev != opened.st_dev)
+        if (stat(path, &st) || fstat(r->fd, &opened) || st.st_size != sizeof(*out) ||
+            st.st_ino != opened.st_ino || st.st_dev != opened.st_dev)
             ls_gp_close(r);
     }
     if (!r->map) {
-        if (r->checked && now - r->checked < 1000) return 0;
+        if (r->checked && now - r->checked < 100) return 0;
         r->checked = now;
         r->fd = open(path, O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
         if (r->fd < 0) return 0;
@@ -57,6 +61,7 @@ static inline int ls_gp_read(struct ls_gp_reader *r, struct ls_gp_state *out) {
         void *map = mmap(NULL, sizeof(*out), PROT_READ, MAP_SHARED, r->fd, 0);
         if (map == MAP_FAILED) { ls_gp_close(r); return 0; }
         r->map = (const struct ls_gp_state *)map;
+        ++r->generation;
     }
     for (unsigned attempt = 0; attempt < 3; ++attempt) {
         uint32_t seq = __atomic_load_n(&r->map->sequence, __ATOMIC_ACQUIRE);

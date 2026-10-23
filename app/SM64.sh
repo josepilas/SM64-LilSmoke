@@ -30,7 +30,12 @@ volume=$("$reader" MASTER_VOLUME 50 2>/dev/null) || volume=50
 case "$volume" in ''|*[!0-9]*|????*) volume=50 ;; esac
 volume=$(printf '%s\n' "$volume" | awk '{v=$0+0;if(v>100)v=100;print int(v/2)}')
 export LILSMOKE_M8_VOLUME="$volume"
-mkdir -p "$app/original" "$app/saves" /persist/logs
+mkdir -p "$app/original" "$app/saves"
+log_helper=${LILSMOKE_SESSION_LOG:-/usr/lib/lilsmoke/lilsmoke-session-log}
+if [ -x "$log_helper" ]; then log=$("$log_helper" sm64-public); else
+    log=$app/saves/sm64-preparation.log
+    if ! ( : >> "$log" ) 2>/dev/null; then log=/dev/null; fi
+fi
 options="$app/saves/.sm64-port/lilsmoke-options.conf"
 if [ -f "$options" ]; then
     value=$(awk -F= '$1=="Quality" {print $2;exit}' "$options")
@@ -41,6 +46,7 @@ if [ -f "$options" ]; then
     case "$value" in ''|*[!0-9]*|????*) ;; *)
         if [ "$value" -le 100 ]; then export SM64_APP_VOLUME="$value"; fi ;; esac
 fi
-# Preparation may use up to 90 MiB virtual; the game runs after worker/UI exit.
-ulimit -v 92160
-exec "$app/runtime/bin/sm64-prepare" "$app" >> /persist/logs/sm64-public.log 2>&1
+# Virtual headroom includes compiler file mappings, not just resident RAM.
+# The game drops to its separate 96 MiB virtual limit after worker/UI exit.
+ulimit -v 131072
+exec "$app/runtime/bin/sm64-prepare" "$app" >> "$log" 2>&1

@@ -38,7 +38,10 @@ namespace lilsmoke {
 
 Input::Input() = default;
 Input::~Input() {
-    for (const Device &device : devices_) close(device.fd);
+    for (const Device &device : devices_) {
+        if (device.fd >= 0) close(device.fd);
+    }
+    ls_gp_close(&usbReader_);
     if (sharedKeys_) shmdt(const_cast<uint32_t *>(sharedKeys_));
 }
 
@@ -467,10 +470,25 @@ void Input::refreshState() {
 }
 
 void Input::sourceButton(Device &device, int source, InputButton button, InputEvent event) {
+    const auto isHeld = [&]() {
+        for (const auto &d : devices_) for (const auto &entry : d.held)
+            if (entry.second == button) return true;
+        if (sharedKeys_) for (unsigned bit = 0; bit < 16; ++bit)
+            if ((*sharedKeys_ & (1U << bit)) && sharedBitButton(bit) == button) return true;
+        return false;
+    };
+    const bool before = isHeld();
     if (event == InputEvent::Released) device.held.erase(source);
     else if (button != InputButton::None) device.held[source] = button;
     refreshState();
-    queueButton(button, event);
+    const bool after = isHeld();
+    if (before != after) queueButton(button, after ? InputEvent::Pressed : InputEvent::Released);
+    else if (after && event == InputEvent::Repeat) queueButton(button, event);
+}
+
+void Input::releaseButtons(Device &device) {
+    const auto held = device.held;
+    for (const auto &entry : held) sourceButton(device, entry.first, entry.second, InputEvent::Released);
 }
 
 bool Input::captureBinding(Device &device, unsigned type, unsigned code, int direction) {
@@ -883,9 +901,8 @@ bool Input::popQueued(InputButton &button, InputEvent &event,
 }
 
 void Input::pollUsbGamepads() {
-    static ls_gp_reader reader{-1, nullptr, 0};
     ls_gp_state snapshot{};
-    ls_gp_read(&reader, &snapshot);
+    ls_gp_read(&usbReader_, &snapshot);
     static const unsigned codes[] = {BTN_SOUTH, BTN_EAST, BTN_WEST, BTN_NORTH,
         BTN_SELECT, BTN_MODE, BTN_START, BTN_THUMBL, BTN_THUMBR, BTN_TL, BTN_TR,
         BTN_DPAD_UP, BTN_DPAD_DOWN, BTN_DPAD_LEFT, BTN_DPAD_RIGHT};
@@ -894,16 +911,24 @@ void Input::pollUsbGamepads() {
         const auto &pad = snapshot.pads[slot];
         const std::string path = "/run/lilsmoke-gamepads/player" + std::to_string(slot);
         auto found = std::find_if(devices_.begin(), devices_.end(), [&](const auto &d) { return d.path == path; });
-        if (!pad.connected || pad.exported) {
+        const bool replaced = found != devices_.end() &&
+            (found->usbGeneration != usbReader_.generation || found->usbPid != snapshot.pid ||
+             found->usbInstance != pad.instance || found->usbVendor != pad.vendor ||
+             found->usbProduct != pad.product || found->usbVersion != pad.version);
+        if (!pad.connected || pad.exported || replaced) {
             if (found != devices_.end()) {
-                for (const auto &held : found->held) queueButton(held.second, InputEvent::Released);
+                releaseButtons(*found);
                 devices_.erase(found); refreshState();
+                found = devices_.end();
             }
-            continue;
+            if (!pad.connected || pad.exported) continue;
         }
         if (found == devices_.end()) {
             if (devices_.size() >= 32) continue;
             Device device; device.fd = -2; device.path = path; device.gamepad = true;
+            device.usbGeneration = usbReader_.generation; device.usbPid = snapshot.pid;
+            device.usbInstance = pad.instance; device.usbVendor = pad.vendor;
+            device.usbProduct = pad.product; device.usbVersion = pad.version;
             device.name.assign(pad.name, strnlen(pad.name, sizeof(pad.name)));
             char identity[96];
             std::snprintf(identity, sizeof(identity), "0003-%04x-%04x-%04x-hidapi", pad.vendor, pad.product, pad.version);
@@ -969,7 +994,7 @@ bool Input::poll(InputButton &btn, InputEvent &evt, PointerEvent &pointer) {
                 device.pointerButtons.clear();
                 pointerState_.primaryDown = false;
                 pointerState_.secondaryDown = pointerState_.middleDown = false;
-                device.held.clear();
+                releaseButtons(device);
                 device.hatX = device.hatY = 0;
                 refreshState();
                 continue;
@@ -1061,9 +1086,10 @@ bool Input::poll(InputButton &btn, InputEvent &evt, PointerEvent &pointer) {
                 else evt = ev.value == 1 ? InputEvent::Pressed
                                          : InputEvent::Released;
                 sourceButton(device, ev.code, b, evt);
-                queued_.pop_back();
                 if (ev.value != 0) pointerState_.visible = false;
-                return true;
+                if (popQueued(btn, evt, pointer)) return true;
+                btn = InputButton::None; evt = InputEvent::None;
+                continue;
             }
 
             if (ev.type == EV_REL && device.relativePointer) {
@@ -1149,10 +1175,10 @@ bool Input::poll(InputButton &btn, InputEvent &evt, PointerEvent &pointer) {
                 if (popQueued(btn, evt, pointer)) return true;
             }
         }
-        if (n < 0 && errno == ENODEV) {
+        if ((n < 0 && errno != EAGAIN && errno != EWOULDBLOCK && errno != EINTR) || n == 0) {
             LOG_INFO("Input: removed %s", device.path.c_str());
             close(device.fd);
-            device.held.clear();
+            releaseButtons(device);
             refreshState();
             pointerState_.primaryDown = false;
             pointerState_.secondaryDown = pointerState_.middleDown = false;

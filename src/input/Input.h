@@ -7,6 +7,7 @@
 #pragma once
 
 #include "Keymap.h"
+#include "gamepad-state.h"
 
 #include <cstdint>
 #include <array>
@@ -15,6 +16,7 @@
 #include <map>
 #include <string>
 #include <vector>
+
 
 namespace lilsmoke {
 
@@ -138,6 +140,9 @@ private:
         std::string path;
         std::string id, name;
         bool gamepad = false, profileReady = false;
+        uint64_t usbGeneration = 0;
+        uint32_t usbInstance = 0, usbPid = 0;
+        uint16_t usbVendor = 0, usbProduct = 0, usbVersion = 0;
         std::map<int, InputButton> held, overrides;
         struct Axis { int minimum = -32768, maximum = 32767, flat = 0, value = 0; };
         std::map<unsigned, Axis> axes;
@@ -192,6 +197,7 @@ private:
     std::string bindingStatus_;
     std::string lastMappedDevice_;
     std::string gamepadDir_ = "/persist/config/gamepads";
+    ls_gp_reader usbReader_ = LS_GP_READER_INIT;
     std::string autoconfigDir_ = "/persist/config/retroarch-autoconfig";
     InputState state_;
     PointerState pointerState_;
@@ -215,6 +221,7 @@ private:
     void configureDevice(Device &device);
     void queueButton(InputButton button, InputEvent event);
     void refreshState();
+    void releaseButtons(Device &device);
     void sourceButton(Device &device, int source, InputButton button, InputEvent event);
     InputButton deviceButton(const Device &device, unsigned code) const;
     void queueAxis(Device &device, unsigned code, int value);

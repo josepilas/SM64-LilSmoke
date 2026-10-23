@@ -19,11 +19,16 @@ def digest(path):
 
 
 def source_offer(delivery):
+    prefix = 'https://github.com/josepilas/SM64-LilSmoke/releases/download/'
+    url = delivery['url']
+    if not url.startswith(prefix) or '/' not in url[len(prefix):]:
+        raise ValueError('Corresponding-source URL must identify this project release')
+    tag = url[len(prefix):].split('/', 1)[0]
     return ('SM64-LilSmoke - Corresponding Source\n\n'
         'The matching dependency sources, build inputs and project source snapshot\n'
         'are provided at no charge as a separate asset in the same release:\n\n'
         + delivery['url']+'\n\nSHA-256: '+delivery['sha256']+'\n\n'
-        'Release: https://github.com/josepilas/SM64-LilSmoke/releases/tag/Pre-Alpha-0.0.1\n'
+        'Release: https://github.com/josepilas/SM64-LilSmoke/releases/tag/'+tag+'\n'
         'Public source: https://github.com/josepilas/SM64-LilSmoke\n\n'
         'Downloading corresponding-source.zip is not necessary to install or play.\n'
         'The package retains its operational engine source, native compiler and\n'
@@ -36,7 +41,8 @@ def source_offer(delivery):
 def review(app):
     files=['meta.json','SM64.sh','icon.webp','LICENSE','original/README.txt']
     if (app/'SOURCE-OFFER.txt').is_file(): files.append('SOURCE-OFFER.txt')
-    allowed={'source.tar.gz','recipe.json','cook.py','native_build.py','bin/sm64-prepare','bin/python3',
+    allowed={'source.tar.gz','recipe.json','cook.py','native_build.py','resume.py','build_progress.py','sound_data.S',
+        'bin/sm64-prepare','bin/sm64-bin2c','bin/sm64-build-shell','bin/python3',
         'source-material-review.json'}
     for path in (app/'runtime').rglob('*'):
         if not path.is_file() or '__pycache__' in path.parts or path.suffix=='.pyc': continue
